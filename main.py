@@ -16,21 +16,18 @@ video = cv2.VideoCapture(video_path)
 # 動画のフレーム数を取得する
 frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
 
-print(frame_count)
-
 # 60フレームごとに処理を繰り返す
 for i in range(0, frame_count):
 
     # フレームを取得する
     ret, frame = video.read(i)  # これを呼び出すことで動画が1フレーム進んでいそう？
 
-    # 一定フレームのときのみ動作
-    if i % 120 != 0:
+    # 一定フレームのときのみ動作 TODO: 何秒おきに確認するかを考える
+    if i % 60 != 0 and i != frame_count - 1:
         continue
 
     if ret:
-        
-        # 画像表示
+        # 画像表示(テスト用)
         cv2.imshow("frame", frame)
 
         # 全体抜き出し
@@ -42,7 +39,7 @@ for i in range(0, frame_count):
         # テキスト処理
         text = text.replace(" ", "")
 
-        print(text)
+        print(i, text)
 
     else:
         print('読み込めませんでした。')
