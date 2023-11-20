@@ -78,19 +78,19 @@ def main():
 
             # テキスト部分を画像認識
             text_roi = frame[text_y:text_y + text_h, text_x:text_x + text_w]
-            cur_text = pytesseract.image_to_string(text_roi, lang="jpn", config="--oem 1")
+            cur_text = pytesseract.image_to_string(text_roi, lang="jpn", config="--psm 3,--oem 1")
             cur_text = cur_text.replace(" ", "")
 
             # 前のセリフより短くなったタイミングで書き出し処理
-            if len(cur_text) < len(prev_text) - 1:  # 画像認識の揺れでテキストが短くなる場合を考慮して-1
+            if len(cur_text) < len(prev_text) - 2:  # 画像認識の揺れでテキストが短くなる場合を考慮して-2
 
-                text = f'{prev_name}:{prev_text}\n'
+                text = f'{prev_name}{prev_text}\n'
                 with open("output.txt", "a", encoding="utf-8") as f:
                     f.write(text)
 
                 # テキスト出力(テスト用)
                 if TEST_FLAG:
-                    print(i, text)
+                    print(text)
 
             # 1フレーム前のテキストを保持
             prev_text = cur_text
@@ -102,11 +102,11 @@ def main():
             name = cv2.bitwise_not(name)
             if TEST_FLAG:
                 cv2.imshow("name", name)
-            prev_name = pytesseract.image_to_string(name, lang="jpn", config="--psm 4, --oem 1")
+            prev_name = pytesseract.image_to_string(name, lang="jpn", config="--psm 8, --oem 1")
         else:
             print('読み込めませんでした。')
 
-        # キーボード入力を待つ 
+        # キーボード入力を待つ
         key = cv2.waitKey(100)
         # スペースキーが押されたら終了する
         if key == 32:
