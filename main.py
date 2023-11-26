@@ -2,6 +2,7 @@ import os
 import cv2
 import pytesseract
 import numpy as np
+from difflib import SequenceMatcher
 
 
 def Init() -> None:
@@ -88,12 +89,11 @@ def main():
             cur_text = pytesseract.image_to_string(text_roi, lang="jpn", config="--psm 6, --oem 3")
             cur_text = cur_text.replace(" ", "")
 
-            # 前のセリフより短くなったタイミングで書き出し処理
-            if len(cur_text) < len(prev_text) - 2:  # 画像認識の揺れでテキストが短くなる場合を考慮して-2
-
+            # 前のセリフとの一致率が低くなったタイミングで書き出し処理
+            if SequenceMatcher(None, cur_text, prev_text).ratio() < 0.3:
                 text += f'{prev_name}{prev_text}\n'
                 if TEST_FLAG:
-                    print(text)
+                    print(f'{prev_name}{prev_text}\n')
 
             # 1フレーム前のテキストを保持
             prev_text = cur_text
