@@ -2,10 +2,12 @@ import os
 import cv2
 import pytesseract
 import numpy as np
+from typing import Union
 from difflib import SequenceMatcher
 
 
 TESSERACT_PATH = "C:\Program Files\Tesseract-OCR"  # 環境変数のパス
+VIDEO_PATH = 'data\sample1.mp4'  # 動画のパス
 START_FRAME = 2 * 60    # 最初の数秒を飛ばす時間
 FRAME_INTERVAL = 10  # 画像を読み取る間隔
 TEST_FLAG = True    # テストフラグ
@@ -20,17 +22,17 @@ def SetPath() -> None:
         os.environ["PATH"] += TESSERACT_PATH
 
 
-def CaptureArea(frame: np.ndarray) -> (int, int, int, int):
+def CaptureArea(img: np.ndarray) -> Union[int, int, int, int]:
     """指定した領域の座標と幅と高さを返す
 
     Args:
-        video (_type_): _description_
+        img (np.ndarray): 画像データ
 
     Returns:
-        x0[int], y0[int], w[int], h[int]: _description_
+        Union[int, int, int, int]: 選択した領域のx座標, y座標, 横幅, 縦幅
     """
 
-    x0, y0, w, h = cv2.selectROI(frame)
+    x0, y0, w, h = cv2.selectROI(img)
     if x0 is None or y0 is None or w is None or h is None:
         print("トリミング領域の指定に失敗しました。")
         exit()
@@ -71,7 +73,7 @@ def main():
     text = ""
 
     SetPath()
-    video = cv2.VideoCapture('data\sample1.mp4')
+    video = cv2.VideoCapture(VIDEO_PATH)
     for i in range(START_FRAME):
         _, frame = video.read()
     name_x, name_y, name_w, name_h = CaptureArea(frame)
@@ -93,8 +95,6 @@ def main():
 
             # テキストウィンドウの画像認識
             text_img = PreprocessImage(frame[text_y:text_y + text_h, text_x:text_x + text_w], TEXT_SCALE)
-            if TEST_FLAG:
-                cv2.imshow("text", text_img)
             text_config = "--psm 6, --oem 3"
             cur_text = pytesseract.image_to_string(text_img, lang="jpn", config=text_config).replace(" ", "")
 
@@ -107,8 +107,6 @@ def main():
             prev_text = cur_text
             # キャラウィンドウの画像認識
             name_img = PreprocessImage(frame[name_y:name_y + name_h, name_x:name_x + name_w], NAME_SCALE, True)
-            if TEST_FLAG:
-                cv2.imshow("name", name_img)
             name_config = "--psm 8, --oem 3, name_whitelist.txt"
             name = pytesseract.image_to_string(name_img, lang="jpn", config=name_config).replace(" ", "")
         else:
