@@ -5,10 +5,12 @@ import numpy as np
 from difflib import SequenceMatcher
 
 
+TESSERACT_PATH = "C:\Program Files\Tesseract-OCR"  # 環境変数のパス
 START_FRAME = 2 * 60    # 最初の数秒を飛ばす時間
 FRAME_INTERVAL = 10  # 画像を読み取る間隔
 TEST_FLAG = True    # テストフラグ
-TESSERACT_PATH = "C:\Program Files\Tesseract-OCR" # 環境変数のパス
+NAME_SCALE = 20     # 名前ウィンドウを拡大する倍率
+TEXT_SCALE = 2     # テキストウィンドウを拡大する倍率
 
 
 def SetPath() -> None:
@@ -70,48 +72,35 @@ def OcrImage(img: np.ndarray, scale: int, mode: int, reverse_flag: bool = False)
 
 def main():
 
-    # 変数宣言
     prev_name = ""
     prev_text = ""
     text = ""
 
-    # 初期化
     SetPath()
-
-    # 動画の取り込み
     video = cv2.VideoCapture('data\sample1.mp4')
-
-    # 動画の総フレーム数を取得する
-    frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-
-    # トリミングのために2秒進める
     for i in range(START_FRAME):
-        ret, frame = video.read(i)
-
-    # 各ウィンドウの領域を選択
+        _, frame = video.read()
     name_x, name_y, name_w, name_h = CaptureArea(frame)
     text_x, text_y, text_w, text_h = CaptureArea(frame)
+    frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    # 動画の読み取り処理
-    for i in range(START_FRAME, frame_count): # TODO:ここでFRAME_INTERVAL刻みにすればよくね？
+    for i in range(START_FRAME, frame_count):
 
-        # フレームを取得する
-        ret, frame = video.read(i)
+        is_recognized, frame = video.read()
 
         # 一定フレーム間隔で読み取りを行う
         if i % FRAME_INTERVAL != 0 and i != frame_count - 1:
             continue
 
-        # 画像表示
+        # 画像表示(テスト用)
         if TEST_FLAG:
             cv2.imshow("frame", frame)
 
-        # 読み取りの可否
-        if ret:
+        if is_recognized:
 
             # テキスト部分を画像認識
             text_img = frame[text_y:text_y + text_h, text_x:text_x + text_w]
-            cur_text = OcrImage(text_img, 2, 6)
+            cur_text = OcrImage(text_img, TEXT_SCALE, 6)
 
             # 前のセリフとの一致率が低くなったタイミングで書き出し処理
             if SequenceMatcher(None, cur_text, prev_text).ratio() < 0.3:
@@ -124,7 +113,7 @@ def main():
 
             # キャラ名を画像認識
             name_img = frame[name_y:name_y + name_h, name_x:name_x + name_w]
-            prev_name = OcrImage(name_img, 6, 8, True)
+            prev_name = OcrImage(name_img, NAME_SCALE, 8, True)
         else:
             print('読み込めませんでした。')
 
