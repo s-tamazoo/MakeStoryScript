@@ -9,7 +9,7 @@ TESSERACT_PATH = "C:\Program Files\Tesseract-OCR"  # 環境変数のパス
 START_FRAME = 2 * 60    # 最初の数秒を飛ばす時間
 FRAME_INTERVAL = 10  # 画像を読み取る間隔
 TEST_FLAG = True    # テストフラグ
-NAME_SCALE = 20     # 名前ウィンドウを拡大する倍率
+NAME_SCALE = 10     # 名前ウィンドウを拡大する倍率
 TEXT_SCALE = 2     # テキストウィンドウを拡大する倍率
 
 
@@ -38,17 +38,16 @@ def CaptureArea(frame: np.ndarray) -> (int, int, int, int):
     return x0, y0, w, h
 
 
-def OcrImage(img: np.ndarray, scale: int, mode: int, reverse_flag: bool = False) -> str:
-    """画像から文字を読み取る
+def PreprocessImage(img: np.ndarray, scale: int, reverse_flag: bool = False) -> np.ndarray:
+    """画像認識しやすい画像に加工する
 
     Args:
         img (np.ndarray): 画像データ
         scale (int): 画像の拡大倍率
-        mode (int): tesseractのpsmモードの選択
         reverse_flag (bool): ビット反転処理フラグ
 
     Returns:
-        str: 読み取った文字列
+        np.ndarray: 加工した画像データ
     """
 
     # グレースケール変換
@@ -62,17 +61,12 @@ def OcrImage(img: np.ndarray, scale: int, mode: int, reverse_flag: bool = False)
 
     # 拡大処理
     h, w = img.shape[:2]
-    img = cv2.resize(img, dsize=(w * scale, h * scale))
-
-    # 画像認識
-    text = pytesseract.image_to_string(img, lang="jpn", config=f"--psm {mode}, --oem 3, name_config")
-
-    return text.replace(" ", "")
+    return cv2.resize(img, dsize=(w * scale, h * scale))
 
 
 def main():
 
-    prev_name = ""
+    name = ""
     prev_text = ""
     text = ""
 
@@ -92,28 +86,31 @@ def main():
         if i % FRAME_INTERVAL != 0 and i != frame_count - 1:
             continue
 
-        # 画像表示(テスト用)
         if TEST_FLAG:
             cv2.imshow("frame", frame)
 
         if is_recognized:
 
-            # テキスト部分を画像認識
-            text_img = frame[text_y:text_y + text_h, text_x:text_x + text_w]
-            cur_text = OcrImage(text_img, TEXT_SCALE, 6)
+            # テキストウィンドウの画像認識
+            text_img = PreprocessImage(frame[text_y:text_y + text_h, text_x:text_x + text_w], TEXT_SCALE)
+            if TEST_FLAG:
+                cv2.imshow("text", text_img)
+            text_config = "--psm 6, --oem 3"
+            cur_text = pytesseract.image_to_string(text_img, lang="jpn", config=text_config).replace(" ", "")
 
             # 前のセリフとの一致率が低くなったタイミングで書き出し処理
-            if SequenceMatcher(None, cur_text, prev_text).ratio() < 0.3:
-                text += f'{prev_name}{prev_text}\n'
+            if SequenceMatcher(None, cur_text, prev_text).ratio() < 0.3 and prev_text != "":
+                text += f'{name}{prev_text}\n'
                 if TEST_FLAG:
-                    print(f'{prev_name}{prev_text}\n')
+                    print(f'{name}{prev_text}\n')
 
-            # 1フレーム前のテキストを保持
             prev_text = cur_text
-
-            # キャラ名を画像認識
-            name_img = frame[name_y:name_y + name_h, name_x:name_x + name_w]
-            prev_name = OcrImage(name_img, NAME_SCALE, 8, True)
+            # キャラウィンドウの画像認識
+            name_img = PreprocessImage(frame[name_y:name_y + name_h, name_x:name_x + name_w], NAME_SCALE, True)
+            if TEST_FLAG:
+                cv2.imshow("name", name_img)
+            name_config = "--psm 8, --oem 3, name_whitelist.txt"
+            name = pytesseract.image_to_string(name_img, lang="jpn", config=name_config).replace(" ", "")
         else:
             print('読み込めませんでした。')
 
